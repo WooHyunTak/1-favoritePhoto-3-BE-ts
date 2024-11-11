@@ -18,13 +18,11 @@ router.post(
     async (
       req: Request & {
         file?: Express.Multer.File & { location?: string };
-        user?: { id: number };
       },
-      res: Response,
-      next: NextFunction
+      res,
+      next
     ) => {
       try {
-        const { file, user } = req;
         const { name, grade, genre, description, totalCount, price } =
           req.body as {
             name: string;
@@ -34,8 +32,8 @@ router.post(
             totalCount: string;
             price: string;
           };
-        const userId = user?.id || "";
-        const imageURL = file ? file.location : "";
+        const { id: userId } = req.user as { id: number };
+        const imageURL = req.file ? req.file.location : "";
         if (!imageURL) {
           return res
             .status(400)

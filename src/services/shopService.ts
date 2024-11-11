@@ -3,24 +3,10 @@ import exChangeRepository from "../repositorys/exchangeRepository";
 import prismaClient from "../utils/prismaClient";
 import createNotificationFromType from "../utils/notification/createByType";
 import {
-  // WhereConditions,
   CreateShopCardData,
   UpdateShopCardData,
 } from "../utils/interface/shop/shopInterfaces.js";
-
-// const whereConditions = (userId: number, keyword?: string): WhereConditions => {
-//   const where: WhereConditions = { userId };
-//   if (keyword) {
-//     where.OR = [
-//       {
-//         card: {
-//           name: { contains: keyword, mode: "insensitive" },
-//         },
-//       },
-//     ];
-//   }
-//   return where;
-// };
+import { CustomError } from "../utils/interface/customError";
 
 /* 카드 존재 여부 확인 */
 const checkCardExists = async (shopId: number) => {
@@ -87,11 +73,12 @@ const createShopCard = async (data: CreateShopCardData) => {
     });
 
     await createNotificationFromType(4, {
+      userId: data.userId,
       shop: {
-        userId: data.userId,
+        user: { id: data.userId },
         card: originalCard,
       },
-    } as any);
+    });
 
     return {
       ...newShopCard,
@@ -116,13 +103,10 @@ const getShopByShopId = async (shopId: number) => {
 };
 
 const getExchangeByUserId = async (shopId: number, userId: number) => {
-  const exchange = await exChangeRepository.getByShopIdAndUser({
-    shopId,
-    userId,
-  });
+  const exchange = await exChangeRepository.getByShopIdAndUser(shopId, userId);
 
   if (!exchange) {
-    const error: any = new Error("Not Found");
+    const error: CustomError = new Error("Not Found");
     error.status = 404;
     error.message = "신청한 교환 내역을 찾을 수 없습니다.";
     throw error;
@@ -152,11 +136,12 @@ const updateShopCard = async (data: UpdateShopCardData) => {
   // Update logic for card as per the conditions given in the original code...
 
   await createNotificationFromType(6, {
+    userId: data.userId,
     shop: {
-      userId: card.userId,
+      user: { id: data.userId },
       card: cardInfo,
     },
-  } as any);
+  });
 
   return {
     ...(await shopRepository.updateShopCard(data)),
@@ -178,12 +163,17 @@ const deleteShopCard = async (shopId: number, userId: number) => {
     where: { id: card.cardId },
   });
 
+  if (!cardInfo) {
+    throw new Error("Card not found");
+  }
+
   await createNotificationFromType(5, {
+    userId: card.userId,
     shop: {
-      userId: card.userId,
-      card: cardInfo,
+      user: { id: card.userId },
+      card: { name: cardInfo.name, grade: cardInfo.grade },
     },
-  } as any);
+  });
 
   return await shopRepository.deleteShopCard(shopId, userId);
 };

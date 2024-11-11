@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import shopService from "../services/shopService";
 import asyncHandle from "../utils/error/asyncHandle";
 import {
@@ -14,13 +14,9 @@ router.post(
   "/",
   passport.authenticate("access-token", { session: false }),
   shopValidation,
-  asyncHandle(
-    async (
-      req: Request & { user?: { id: number } },
-      res: Response,
-      next: NextFunction
-    ) => {
-      const userId = req.user?.id;
+  asyncHandle(async (req, res, next) => {
+    try {
+      const { id: userId } = req.user as { id: number };
 
       if (!userId) {
         return res.status(401).send({ message: "유저가 없습니다." });
@@ -53,40 +49,46 @@ router.post(
         exchangeDescription,
       });
       return res.status(201).json(newCard);
+    } catch (err) {
+      next(err);
     }
-  )
+  })
 );
 
 // 모든 판매중인 포토 카드 조회(로그인 없이 가능)
 router.get(
   "/cards",
-  asyncHandle(async (req: Request, res: Response) => {
-    const {
-      page = "1",
-      pageSize = "10",
-      search,
-      grade,
-      genre,
-      isSoldOut,
-      sortOrder = "createAt_DESC",
-    } = req.query as {
-      page?: string;
-      pageSize?: string;
-      search?: string;
-      grade?: string;
-      genre?: string;
-      isSoldOut?: string;
-      sortOrder?: string;
-    };
+  asyncHandle(async (req, res, next) => {
+    try {
+      const {
+        page = "1",
+        pageSize = "10",
+        search,
+        grade,
+        genre,
+        isSoldOut,
+        sortOrder = "createAt_DESC",
+      } = req.query as {
+        page?: string;
+        pageSize?: string;
+        search?: string;
+        grade?: string;
+        genre?: string;
+        isSoldOut?: string;
+        sortOrder?: string;
+      };
 
-    const shopCards = await shopService.getAllShop(
-      { search, grade, genre, isSoldOut },
-      sortOrder,
-      parseInt(page, 10),
-      parseInt(pageSize, 10)
-    );
+      const shopCards = await shopService.getAllShop(
+        { search, grade, genre, isSoldOut },
+        sortOrder,
+        parseInt(page, 10),
+        parseInt(pageSize, 10)
+      );
 
-    return res.status(200).json(shopCards);
+      return res.status(200).json(shopCards);
+    } catch (err) {
+      next(err);
+    }
   })
 );
 
@@ -94,10 +96,16 @@ router.get(
 router.get(
   "/cards/:shopId",
   passport.authenticate("access-token", { session: false }),
-  asyncHandle(async (req: Request, res: Response) => {
-    const { shopId } = req.params;
-    const cardDetails = await shopService.getShopByShopId(parseInt(shopId, 10));
-    return res.status(200).json(cardDetails);
+  asyncHandle(async (req, res, next) => {
+    try {
+      const { shopId } = req.params;
+      const cardDetails = await shopService.getShopByShopId(
+        parseInt(shopId, 10)
+      );
+      return res.status(200).json(cardDetails);
+    } catch (err) {
+      next(err);
+    }
   })
 );
 
@@ -106,13 +114,10 @@ router.patch(
   "/cards/:shopId/:cardId",
   passport.authenticate("access-token", { session: false }),
   shopEditValidation,
-  asyncHandle(
-    async (
-      req: Request & { user?: { id: number } },
-      res: Response,
-      next: NextFunction
-    ) => {
+  asyncHandle(async (req, res, next) => {
+    try {
       const { shopId, cardId } = req.params;
+      const { id: userId } = req.user as { id: number };
       const {
         price,
         totalCount,
@@ -135,26 +140,24 @@ router.patch(
         exchangeGrade,
         exchangeGenre,
         exchangeDescription,
-        userId: req.user?.id as number,
+        userId,
       });
 
       return res.status(200).json(updatedCard);
+    } catch (err) {
+      next(err);
     }
-  )
+  })
 );
 
 // 판매중인 카드 판매 취소(판매 내리기)
 router.delete(
   "/cards/:shopId",
   passport.authenticate("access-token", { session: false }),
-  asyncHandle(
-    async (
-      req: Request & { user?: { id: number } },
-      res: Response,
-      next: NextFunction
-    ) => {
+  asyncHandle(async (req, res, next) => {
+    try {
       const { shopId } = req.params;
-      const userId = req.user?.id;
+      const { id: userId } = req.user as { id: number };
 
       if (!userId) {
         return res.status(401).send({ message: "유저가 없습니다." });
@@ -162,40 +165,50 @@ router.delete(
 
       await shopService.deleteShopCard(parseInt(shopId, 10), userId);
       return res.status(200).json({ message: "카드의 판매가 취소되었습니다." });
+    } catch (err) {
+      next(err);
     }
-  )
+  })
 );
 
 // 교환 정보 조회
 router.get(
   "/cards/:shopId/exchange",
   passport.authenticate("access-token", { session: false }),
-  asyncHandle(async (req: Request, res: Response) => {
-    const { shopId } = req.params;
-    const shopDetails = await shopService.getExchangeByShopId(
-      parseInt(shopId, 10)
-    );
-    return res.status(200).json(shopDetails);
+  asyncHandle(async (req, res, next) => {
+    try {
+      const { shopId } = req.params;
+      const shopDetails = await shopService.getExchangeByShopId(
+        parseInt(shopId, 10)
+      );
+      return res.status(200).json(shopDetails);
+    } catch (err) {
+      next(err);
+    }
   })
 );
 
 // 필터별 카드 개수 조회 API
 router.get(
   "/counts",
-  asyncHandle(async (req: Request, res: Response) => {
-    const { grade, genre, isSoldOut } = req.query as {
-      grade?: string;
-      genre?: string;
-      isSoldOut?: string;
-    };
+  asyncHandle(async (req, res, next) => {
+    try {
+      const { grade, genre, isSoldOut } = req.query as {
+        grade?: string;
+        genre?: string;
+        isSoldOut?: string;
+      };
 
-    const counts = await shopService.getFilterCounts({
-      grade,
-      genre,
-      isSoldOut,
-    });
+      const counts = await shopService.getFilterCounts({
+        grade,
+        genre,
+        isSoldOut,
+      });
 
-    return res.status(200).json(counts);
+      return res.status(200).json(counts);
+    } catch (err) {
+      next(err);
+    }
   })
 );
 

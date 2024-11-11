@@ -3,7 +3,7 @@ import { Exchange, Shop, Purchase, User, Card } from "@prisma/client";
 import { CustomError } from "../interface/customError";
 
 interface ShopData {
-  user: { nickname: string; id: number };
+  user: { nickname?: string; id: number };
   card: { name: string; grade: string };
 }
 
